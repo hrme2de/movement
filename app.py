@@ -43,38 +43,38 @@ if video_file is not None:
     tfile.write(video_file.read())
     st.video(tfile.name)
 
-if st.button("Run Analysis"):
-    st.info("Extracting pose landmarks and calculating jump heights...")
+    if st.button("Run Analysis"):
+        st.info("Extracting pose landmarks and calculating jump heights...")
 
-    cap = cv2.VideoCapture(tfile.name)
-    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    landmarks_sequence = []
+        cap = cv2.VideoCapture(tfile.name)
+        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        landmarks_sequence = []
 
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = pose.process(frame_rgb)
-        if results.pose_landmarks:
-            landmarks_sequence.append(results.pose_landmarks.landmark)
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            results = pose.process(frame_rgb)
+            if results.pose_landmarks:
+                landmarks_sequence.append(results.pose_landmarks.landmark)
 
-    cap.release()
+        cap.release()
 
-    jump_heights_raw = calculate_jump_heights(landmarks_sequence, frame_height)
-    jump_heights_clean = [h for h in jump_heights_raw if h is not None]
+        jump_heights_raw = calculate_jump_heights(landmarks_sequence, frame_height)
+        jump_heights_clean = [h for h in jump_heights_raw if h is not None]
 
-    if not jump_heights_clean:
-        st.error("No valid jump data found.")
-    else:
-        avg_jump = round(np.mean(jump_heights_clean), 2)
-        max_jump = round(np.max(jump_heights_clean), 2)
-        st.session_state["results"] = {
-            "jump_heights": jump_heights_clean,
-            "avg_jump": avg_jump,
-            "max_jump": max_jump
-        }
-        st.success("✅ Analysis complete!")
+        if not jump_heights_clean:
+            st.error("No valid jump data found.")
+        else:
+            avg_jump = round(np.mean(jump_heights_clean), 2)
+            max_jump = round(np.max(jump_heights_clean), 2)
+            st.session_state["results"] = {
+                "jump_heights": jump_heights_clean,
+                "avg_jump": avg_jump,
+                "max_jump": max_jump
+            }
+            st.success("✅ Analysis complete!")
 
 # Display results if stored
 if "results" in st.session_state:
@@ -88,8 +88,19 @@ if "results" in st.session_state:
     st.markdown(f"- **Average Jump Height:** {avg_jump} px")
     st.markdown(f"- **Max Jump Height:** {max_jump} px")
 
+    # Performance feedback
     st.subheader("🗳️ Rate This Performance")
-    rating = st.radio("How did this session feel?", ["Excellent", "Good", "Average", "Needs Improvement"], key="rating")
+
+    if "rating" not in st.session_state:
+        st.session_state["rating"] = "Good"
+    if "comments" not in st.session_state:
+        st.session_state["comments"] = ""
+
+    rating = st.radio(
+        "How did this session feel?",
+        ["Excellent", "Good", "Average", "Needs Improvement"],
+        key="rating"
+    )
     comments = st.text_area("Any additional notes?", key="comments")
 
     if st.button("📅 Save Session"):
@@ -106,3 +117,6 @@ if "results" in st.session_state:
         with open(filepath, "w") as f:
             json.dump(session_data, f, indent=4)
         st.success(f"✅ Session saved as `{filepath}`")
+
+# Load and display session history
+st.sidebar.title("📚 Session History")
